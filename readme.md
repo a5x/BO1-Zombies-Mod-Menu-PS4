@@ -10,7 +10,7 @@ MULTIPLAYER AND CAMPAIGN NOT RELEASED YET
 
 ## About the Project
 
-I decided to create a mod menu for Black Ops 1 that pays tribute to one of the most iconic mod menus of all time: **Revolution** by Enstone.
+I decided to create a mod menu for Black Ops 1 that pays tribute to one of the most iconic mod menus of all time: **Revolution** by Enstone. (because i love this menu)
 
 <img width="1920" height="1080" alt="20260916_051025_00620981" src="https://github.com/user-attachments/assets/704ef27a-9340-4ec8-8dba-49b1d11d1943" />
 <img width="1920" height="1080" alt="20260916_051016_00590053" src="https://github.com/user-attachments/assets/85863cb9-4aa6-4bcb-99d4-83f23fadf613" />
