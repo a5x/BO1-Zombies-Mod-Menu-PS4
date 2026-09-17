@@ -1,6 +1,6 @@
 # Black Ops 1 Zombies PS4 GSC Mod Menu 
 
-**Revolution Reborn 1.0.1**
+**Revolution Reborn 1.0.1 also open source**
 
 Welcome to **Revolution Reborn**.
 
