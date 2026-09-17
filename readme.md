@@ -10,9 +10,11 @@ MULTIPLAYER AND CAMPAIGN NOT RELEASED YET
 
 ## About the Project
 
-After more than 14 years in the Call of Duty modding scene, starting on PS3 during the golden age of modding (especially Black Ops 2), I decided to create a mod menu for Black Ops 1 that pays tribute to one of the most iconic mod menus of all time: **Revolution** by Enstone.
+I decided to create a mod menu for Black Ops 1 that pays tribute to one of the most iconic mod menus of all time: **Revolution** by Enstone.
 
-This project is a spiritual successor and homage to that legendary menu for all the OGs who grew up with it.
+<img width="1920" height="1080" alt="20260916_051025_00620981" src="https://github.com/user-attachments/assets/704ef27a-9340-4ec8-8dba-49b1d11d1943" />
+<img width="1920" height="1080" alt="20260916_051016_00590053" src="https://github.com/user-attachments/assets/85863cb9-4aa6-4bcb-99d4-83f23fadf613" />
+
 
 ### UI Changes from the Original BO2 Version
 I made some light modifications to adapt the design to BO1 while staying as faithful as possible:
