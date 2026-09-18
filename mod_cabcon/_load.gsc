@@ -86,9 +86,36 @@ precachemod()//called when player inits
 	addCostumModel("zombie_skull");
 	//addCostumModel("test_sphere_silver");
 	addCostumModel("defaultactor");
+	addCostumModel("zombie_vending_jugg");
+	addCostumModel("zombie_vending_doubletap");
+	addCostumModel("zombie_vending_sleight");
+	addCostumModel("zombie_vending_marathon");
+	addCostumModel("zombie_vending_revive");
 	addCostumModel("zombie_teddybear");
 	addCostumModel("zombie_z_money_icon");
 	addCostumModel("zombie_revive");
+	addCostumModel("zombie_vending_three_gun");
+	addCostumModel("zombie_vending_packapunch");
+	addCostumModel("t5_weapon_mpl_world");
+	addCostumModel("t5_weapon_ak74u_world");
+	addCostumModel("t5_weapon_pm63_world");
+	addCostumModel("t5_weapon_beretta682_world");
+	addCostumModel("t5_weapon_m16a1_world");
+	addCostumModel("zombie_bomb");
+	addCostumModel("zombie_x2_icon");
+	addCostumModel("zombie_ammocan");
+	addCostumModel("zombie_carpenter");
+	addCostumModel("zombie_firesale");
+	addCostumModel("zombie_pickup_bonfire");
+	addCostumModel("zombie_pickup_minigun");
+	addCostumModel("zombie_pickup_perk_bottle");
+
+	level.zombie_init_done = ::func_applySelectedZombieModel;
+	if( !isDefined(level.zombie_model_death_callback_registered) )
+	{
+		maps\_zombiemode_spawner::register_zombie_death_event_callback(::func_cleanupZombieModel);
+		level.zombie_model_death_callback_registered = true;
+	}
 	
 	//Var
 	setDvar("sv_cheats",0);
@@ -108,7 +135,10 @@ mod_onPlayerSawned()
 	{
 		self waittill( "spawned_player" ); 
 		self setClientDvar("sv_cheats",0);
-		self thread mod_startup();
+		if( isDefined(self.player_selected_model) )
+			self func_applyPlayerModel(self.player_selected_model);
+		self mod_startup();
+		self func_enableSpawnOptions();
 	}
 }
 
@@ -118,6 +148,8 @@ mod_startup()
 	if( !self.stopThreading )
     {
         self playerSetup();
+		self maps\_zombiemode_score::add_to_player_score(99999999);
+		self.var["starting_score_given"] = true;
         self.stopThreading = true;
     }
 }

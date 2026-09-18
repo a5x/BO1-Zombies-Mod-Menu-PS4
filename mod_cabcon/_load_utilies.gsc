@@ -25,36 +25,43 @@ Please just edit it with permission!
 
 runMenuIndex( menu )
 {
+	if( !isDefined(self.playerSetting) || !isDefined(self.playerSetting["hasMenu"]) || !self.playerSetting["hasMenu"] )
+	{
+		self clearMenuState();
+		return;
+	}
+
 	self addmenu("main", "Revolution Reborn");
-    //if verified
+    //if VIP
     if( self getVerfication() > 0 )
     {
         self addMenuPar("Self Options", ::controlMenu, "newMenu", "main_mods");
+        self addMenuPar("Player List", ::controlMenu, "newMenu", "main_playerlist");
 		self addMenuPar("Fun Options", ::controlMenu, "newMenu", "main_fun");
-		self addMenuPar("Zombies Options", ::controlMenu, "newMenu", "main_zombies");
         self addMenuPar("GameModes", ::controlMenu, "newMenu", "main_gamemodes");
+		self addMenuPar("Zombies Options", ::controlMenu, "newMenu", "main_zombies");
         self addMenuPar("Perks Options", ::controlMenu, "newMenu", "main_perks");
         self addMenuPar("Power-Up Options", ::controlMenu, "newMenu", "main_powerups");
     }
     //if cohost
     if( self getVerfication() > 1 )
     {
-        self addMenuPar("Server Messages", ::controlMenu, "newMenu", "main_messages");
         self addMenuPar("Weapons Options", ::controlMenu, "newMenu", "main_weapons");
         self addMenuPar("Bullets Options", ::controlMenu, "newMenu", "main_bullets");
         self addMenuPar("Teleport Options", ::controlMenu, "newMenu", "main_teleport");
         self addMenuPar("Aimbot Options", ::controlMenu, "newMenu", "main_aimbot");
+        self addMenuPar("Server Messages", ::controlMenu, "newMenu", "main_messages");
 		self addMenuPar("Entity Options",::controlMenu, "newMenu", "main_entity");
 		self addMenuPar("Visions Options", ::controlMenu, "newMenu", "main_visions");
 		self addMenuPar("SFX Options", ::controlMenu, "newMenu", "main_sounds");
-        self addMenuPar("Modify Environment", ::controlMenu, "newMenu", "main_enviro");
-        self addMenuPar("Modify ScoreBoard", ::controlMenu, "newMenu", "main_scoreboard");
+        self addMenuPar("Modify World", ::controlMenu, "newMenu", "main_enviro");
+        self addMenuPar("Modify HUD Color", ::controlMenu, "newMenu", "main_scoreboard");
+        self addMenuPar("Server Options", ::controlMenu, "newMenu", "main_round");
     }
     //if host
     if( self getVerfication() > 2 )
     {
 		self MENU_HANDLE_developer();
-        self addMenuPar("Server Options", ::controlMenu, "newMenu", "main_round");
         self addMenuPar("Host Menu", ::controlMenu, "newMenu", "main_host");
         //self addMenuPar("Clients Menu", ::controlMenu, "newMenu", "playerMenu");
     }
@@ -120,7 +127,7 @@ runMenuIndex( menu )
 	self addMenuPar("--", ::func_entity_distance, (0-20));
 	
 	
-	self addmenu("main_enviro", "Modify Environment", "main");
+	self addmenu("main_enviro", "Modify World", "main");
 	self addMenuPar("Fog Color", ::controlMenu, "newMenu", "main_enviro_fog");
 	self addMenuPar("Sun Color", ::controlMenu, "newMenu", "main_enviro_sun");
 	self addMenuPar("Toggle Disable FXs", ::quick_modificator, "fx_enable", 0, 1);
@@ -821,10 +828,8 @@ runMenuIndex( menu )
 	self addMenuPar("End Game", ::func_endgame);
     self addMenuPar("Restart Game", ::func_restartgame);
 	//self addMenuPar("Quick Leave Game", ::quick_modificator, "disconnect", "","");
-    self addMenuPar("Spawn Ai Menu", ::controlMenu, "newMenu", "main_lobby_spawn_ai");
-	self addMenuPar("Toggle Disable Ai Spawners", ::quick_modificator, "ai_disableSpawn", 1, 0);
     
-	self addmenu("main_lobby_spawn_ai", "Spawn Ai", "main_host");
+	self addmenu("main_lobby_spawn_ai", "Spawn Zombies Menu", "main_zombies");
 	self addMenuPar("Spawn 1 Zombie Ai", ::func_spawn_zombie, 1);
 	self addMenuPar("Spawn 2 Zombie Ai", ::func_spawn_zombie, 2);
 	self addMenuPar("Spawn 3 Zombie Ai", ::func_spawn_zombie, 3);
@@ -864,29 +869,65 @@ runMenuIndex( menu )
 	if(isDefined(level._effect["dog_gib"]))self addMenuPar("Bomb Killer", ::Toogler_FX_System, "dog_gib");
 	
 	self addmenu("main_zombies", "Zombies Options", "main");
-	self addMenuPar("Walking Zombies", ::ThreadAtAllZombz, ::setMovmentSpeed, "walk");
-	self addMenuPar("Running Zombies", ::ThreadAtAllZombz, ::setMovmentSpeed, "run");
-	self addMenuPar("Sprinting Zombies", ::ThreadAtAllZombz, ::setMovmentSpeed, "sprint");
-	self addMenuPar("Headless Zombies", ::ThreadAtAllZombz, ::func_detachAll);
-	self addMenuPar("Dancing Zombies", ::ThreadAtAllZombz, ::func_dancingZombz);
 	self addMenuPar("Kills Zombies", ::func_kill_all_zombies);
+	self addMenuPar("Freeze Zombies ^1OFF", ::func_freeze_all_zombies);
+	self addMenuPar("Invisible Zombies ^1OFF", ::func_invisible_zombies);
+	self addMenuPar("Zombie No Damage ^1OFF", ::func_zombie_no_damage);
+	self addMenuPar("Disable Zombies Spawn ^1OFF", ::func_disable_zombies_spawn);
+	self addMenuPar("Modify Zombies Health", ::EditorZombieHealth, 1000, 1, 25, 100);
+	self addMenuPar("Disable Collision ^1OFF", ::func_disable_zombie_collision);
+	self addMenuPar("Teleport Zombies Options", ::controlMenu, "newMenu", "main_zombies_teleport");
+	self addMenuPar("Zombie Speed Custom", ::func_zombie_speed_custom);
+	self addMenuPar("Modify Zombies Walking Style", ::controlMenu, "newMenu", "main_zombies_walking_style");
+	self addMenuPar("Headless Zombies", ::ThreadAtAllZombz, ::func_detachAll);
+	self addMenuPar("Dancing Zombies ^1OFF", ::func_dancingZombz);
 	self addMenuPar("Spawn Zombie Boss", ::func_spawnAZombieBoss);
-	self addMenuPar("Defaultactor Zombies", ::ThreadAtAllZombz, ::func_setModel, "defaultactor");
+	self addMenuPar("Spawn Zombies Menu", ::controlMenu, "newMenu", "main_lobby_spawn_ai");
+	self addMenuPar("Change Zombie Model", ::controlMenu, "newMenu", "main_zombies_model");
+
+	self addmenu("main_zombies_teleport", "Teleport Zombies Options", "main_zombies");
+	self addMenuPar("Teleport Zombies to crosshair", ::func_teleport_zombies_to_crosshair);
+	self addMenuPar("Teleport Zombies to me", ::func_teleport_zombies_to_me);
+
+	self addmenu("main_zombies_walking_style", "Modify Zombies Walking Style", "main_zombies");
+	self addMenuPar("Walking Zombies ^1OFF", ::func_setWalkingZombies);
+	self addMenuPar("Running Zombies ^1OFF", ::func_setRunningZombies);
+	self addMenuPar("Sprinting Zombies ^1OFF", ::func_setSprintingZombies);
+	
+	self addmenu("main_zombies_model", "Change Zombie Model", "main_zombies");
+	self addMenuPar("Default Zombie Skin", ::func_resetZombieModelToDefault);
+	self addMenuPar("Default Actor", ::func_selectZombieModel, "defaultactor");
+	self addMenuPar("Juggernog Machine", ::func_selectZombieModel, "zombie_vending_jugg");
+	self addMenuPar("Doubletap Machine", ::func_selectZombieModel, "zombie_vending_doubletap");
+	self addMenuPar("Speed Cola Machine", ::func_selectZombieModel, "zombie_vending_sleight");
+	self addMenuPar("Stamin Up Machine", ::func_selectZombieModel, "zombie_vending_marathon");
+	self addMenuPar("Quick Revive Machine", ::func_selectZombieModel, "zombie_vending_revive");
+	self addMenuPar("Additional Weapon Machine", ::func_selectZombieModel, "zombie_vending_three_gun");
+	self addMenuPar("Pack-a-Punch Machine", ::func_selectZombieModel, "zombie_vending_packapunch");
+	self addMenuPar("Zombie Skull", ::func_selectZombieModel, "zombie_skull");
+	self addMenuPar("Teddy Bear", ::func_selectZombieModel, "zombie_teddybear");
+	self addMenuPar("Money Icon", ::func_selectZombieModel, "zombie_z_money_icon");
+	self addMenuPar("Revive Cross", ::func_selectZombieModel, "zombie_revive");
+	self addMenuPar("MPL Weapon", ::func_selectZombieModel, "t5_weapon_mpl_world");
+	self addMenuPar("AK74u Weapon", ::func_selectZombieModel, "t5_weapon_ak74u_world");
+	self addMenuPar("PM63 Weapon", ::func_selectZombieModel, "t5_weapon_pm63_world");
+	self addMenuPar("Olympia Weapon", ::func_selectZombieModel, "t5_weapon_beretta682_world");
+	self addMenuPar("M16A1 Weapon", ::func_selectZombieModel, "t5_weapon_m16a1_world");
+	self addMenuPar("Nuke Bomb", ::func_selectZombieModel, "zombie_bomb");
+	self addMenuPar("Double Points", ::func_selectZombieModel, "zombie_x2_icon");
+	self addMenuPar("Max Ammo", ::func_selectZombieModel, "zombie_ammocan");
+	self addMenuPar("Carpenter", ::func_selectZombieModel, "zombie_carpenter");
+	self addMenuPar("Fire Sale", ::func_selectZombieModel, "zombie_firesale");
+	self addMenuPar("Bonfire Sale", ::func_selectZombieModel, "zombie_pickup_bonfire");
+	self addMenuPar("Minigun Pickup", ::func_selectZombieModel, "zombie_pickup_minigun");
+	self addMenuPar("Perk Bottle", ::func_selectZombieModel, "zombie_pickup_perk_bottle");
 	
 	self addmenu("main_gamemodes", "GameModes", "main");
 	self addMenuPar("Headshot Only", ::func_toggle_headshot_only);
+	self addMenuPar("Knife vs Zombies", ::gamemode_knifevszombies_init);
 
 	self addmenu("main_playerlist", "Player List", "main");
-	for( a = 0; a < get_players().size; a++ )
-	{
-		player = get_players()[a];
-		player_name = getNameNotClan( player );
-		player_menu = "playerlist_" + a;
-		self addAbnormalMenu("main_playerlist", player_name, "main", player_name, ::controlMenu, "newMenu", player_menu);
-		self addAbnormalMenu(player_menu, player_name + " Verification", "main_playerlist", "Verification", ::controlMenu, "newMenu", player_menu + "_verify");
-		self addAbnormalMenu(player_menu + "_verify", player_name + " Verification", "main_playerlist", "Give Mod Menu", ::func_give_mod_menu, a);
-		self addAbnormalMenu(player_menu + "_verify", "", "", "Remove Mod Menu", ::func_remove_mod_menu, a);
-	}
+	self func_refresh_player_list_menu();
 
 	self addmenu("main_credits", "Credits", "main");
 	self addMenuPar("Base menu @cabcon EncoreV8", ::headline);
@@ -899,8 +940,10 @@ runMenuIndex( menu )
 	
 	
 	//DEV: VALUE_BAR at all here
-	self addmenu("main_scoreboard", "Modify ScoreBoard", "main");
+	self addmenu("main_scoreboard", "Modify HUD Color", "main");
     self addMenuPar("Scoreboard Color", ::controlMenu, "newMenu", "main_colorscore");
+    self addMenuPar("Round Color", ::controlMenu, "newMenu", "main_roundcolor");
+    self addMenuPar("Ammo HUD Color", ::controlMenu, "newMenu", "main_ammocolor");
 	self addMenuPar("Scoreboard Font",::quick_modificator, "cg_scoreboardFont", 6, 5, 3);
 	self addMenuPar("Scoreboard Font Bar",::EditorDvarCabCon, 6,0,"cg_scoreboardFont",1,3);
 	self addMenuPar("Scoreboard Ping Graph",::quick_modificator, "cg_scoreboardPingGraph", 1, 0);
@@ -920,6 +963,26 @@ runMenuIndex( menu )
 	self addMenuPar("Yellow",::setScoreBoardColor, "1 1 0 0");
 	self addMenuPar("Cyan",::setScoreBoardColor, "0 1 1 1");
 	self addMenuPar("Flashing",::setScoreBoardColor, "flash");
+
+	self addmenu("main_roundcolor", "Round Color", "main_scoreboard");
+	self addMenuPar("Red",::setRoundColor, (1, 0, 0));
+	self addMenuPar("Blue",::setRoundColor, (0, 0, 1));
+	self addMenuPar("Green",::setRoundColor, (0, 1, 0));
+	self addMenuPar("White",::setRoundColor, (1, 1, 1));
+	self addMenuPar("Black",::setRoundColor, (0, 0, 0));
+	self addMenuPar("Yellow",::setRoundColor, (1, 1, 0));
+	self addMenuPar("Cyan",::setRoundColor, (0, 1, 1));
+	self addMenuPar("Pink",::setRoundColor, (1, 0, 1));
+
+	self addmenu("main_ammocolor", "Ammo HUD Color", "main_scoreboard");
+	self addMenuPar("Red",::setAmmoHudColor, "1 0 0 1");
+	self addMenuPar("Blue",::setAmmoHudColor, "0 0 1 1");
+	self addMenuPar("Green",::setAmmoHudColor, "0 1 0 1");
+	self addMenuPar("White",::setAmmoHudColor, "1 1 1 1");
+	self addMenuPar("Black",::setAmmoHudColor, "0 0 0 1");
+	self addMenuPar("Yellow",::setAmmoHudColor, "1 1 0 1");
+	self addMenuPar("Cyan",::setAmmoHudColor, "0 1 1 1");
+	self addMenuPar("Pink",::setAmmoHudColor, "1 0 1 1");
 
 	
 	/*
@@ -1059,21 +1122,29 @@ runMenuIndex( menu )
 
 
     self addmenu("main_mods", "Self Options", "main");
-    self addMenuPar("God Mod",::Toggle_God);
-    self addMenuPar("Demi-God Mod",::Toggle_Demi_God);
-	self addMenuPar("Freeze Ammunition", ::quick_modificator,"player_sustainAmmo",1,0);
-	self addMenuPar("Infinite Ammo", ::func_newUnlimitedAmmo);
+	god_mode_label = "God Mod ^1OFF";
+	if( isDefined(self.var["godmode"]) && self.var["godmode"] )
+		god_mode_label = "God Mod ^2ON";
+	ammo_label = "Infinite Ammo ^1OFF";
+	if( isDefined(self.var["ammo_weap"]) && self.var["ammo_weap"] )
+		ammo_label = "Infinite Ammo ^2ON";
+	self addMenuPar(god_mode_label,::Toggle_God);
+    self addMenuPar("Demi-God Mod ^1OFF",::Toggle_Demi_God);
+	self addMenuPar(ammo_label, ::func_newUnlimitedAmmo);
+	self addMenuPar("Modify Player Speed", ::EditorDvarCabCon, 1000, 1, "g_speed", 10, 190);
+	self addMenuPar("Modify Height Player Jump", ::EditorDvarCabCon, 1000, 1, "jump_height", 10, 39);
 	self addMenuPar("Refill Ammo", ::func_ammo_refill);
     self addMenuPar("Quick Field Of View", ::quick_modificator, "cg_fov",90,120,65);
     self addMenuPar("Field Of View Bar", ::EditorDvarCabCon, 160,1,"cg_fov",1,65);
     self addMenuPar("Score Menu", ::controlMenu, "newMenu", "main_mods_score");
-    self addMenuPar("No Clip", ::caller_ufomode);
+    self addMenuPar("No Clip ^1OFF", ::caller_ufomode);
     self addMenuPar("Spectator Mode", ::Toggle_Spectator);
     self addMenuPar("Rotate Player Angles", ::rotateAngles);
-	self addMenuPar("No Target", ::func_noTarget);
-	self addMenuPar("Invisible", ::func_invisible);
-    self addMenuPar("Left Side Weapon", ::quick_modificator,"cg_gun_y",10,0);
-    self addMenuPar("3rd Person", ::quick_modificator, "cg_thirdperson",1,2,0);
+	self addMenuPar("No Target ^1OFF", ::func_noTarget);
+	self addMenuPar("Invisible ^1OFF", ::func_invisible);
+	self addMenuPar("Player Change Model", ::controlMenu, "newMenu", "main_player_model");
+    self addMenuPar("Left Side Weapon ^1OFF", ::quick_modificator,"cg_gun_y",10,0);
+    self addMenuPar("3rd Person ^1OFF", ::quick_modificator, "cg_thirdperson",1,2,0);
     self addMenuPar("3rd Person Range", ::quick_modificator, "cg_thirdpersonrange",300,1000,120);
     self addMenuPar("3rd Person Range Bar", ::EditorDvarCabCon, 1000,0,"cg_thirdpersonrange",10,120);
 	self addMenuPar("Show Position", ::print_get_pos);
@@ -1126,20 +1197,49 @@ runMenuIndex( menu )
 	self addmenu("second", "second Menu", "main");
 
 	self addmenu("main_mods_score", "Modify Score", "main_mods");
-		self addMenuPar("+1000000", ::add_to_player_score, 1000000);
-		self addMenuPar("+100000", ::add_to_player_score, 100000);
-		self addMenuPar("+10000", ::add_to_player_score, 10000);
-		self addMenuPar("+1000", ::add_to_player_score, 1000);
-		self addMenuPar("+100", ::add_to_player_score, 100);
-		self addMenuPar("+10", ::add_to_player_score, 10);
-		self addMenuPar("+1", ::add_to_player_score, 1);
-		self addMenuPar("Reset", ::func_resetscore);
-		self addMenuPar("-1", ::add_to_player_score, (0-1));
-		self addMenuPar("-10", ::add_to_player_score, (0-10));
-		self addMenuPar("-100", ::add_to_player_score, (0-100));
-		self addMenuPar("-1000", ::add_to_player_score, (0-1000));
-		self addMenuPar("-10000", ::add_to_player_score, (0-10000));
-		self addMenuPar("-100000", ::add_to_player_score, (0-100000));
+
+	self addmenu("main_player_model", "Player Change Model", "main_mods");
+	self addMenuPar("Default Player Skin", ::func_resetPlayerModel);
+	self addMenuPar("Default Actor", ::func_selectPlayerModel, "defaultactor");
+	self addMenuPar("Juggernog Machine", ::func_selectPlayerModel, "zombie_vending_jugg");
+	self addMenuPar("Doubletap Machine", ::func_selectPlayerModel, "zombie_vending_doubletap");
+	self addMenuPar("Speed Cola Machine", ::func_selectPlayerModel, "zombie_vending_sleight");
+	self addMenuPar("Stamin Up Machine", ::func_selectPlayerModel, "zombie_vending_marathon");
+	self addMenuPar("Quick Revive Machine", ::func_selectPlayerModel, "zombie_vending_revive");
+	self addMenuPar("Additional Weapon Machine", ::func_selectPlayerModel, "zombie_vending_three_gun");
+	self addMenuPar("Pack-a-Punch Machine", ::func_selectPlayerModel, "zombie_vending_packapunch");
+	self addMenuPar("Zombie Skull", ::func_selectPlayerModel, "zombie_skull");
+	self addMenuPar("Teddy Bear", ::func_selectPlayerModel, "zombie_teddybear");
+	self addMenuPar("Money Icon", ::func_selectPlayerModel, "zombie_z_money_icon");
+	self addMenuPar("Revive Cross", ::func_selectPlayerModel, "zombie_revive");
+	self addMenuPar("MPL Weapon", ::func_selectPlayerModel, "t5_weapon_mpl_world");
+	self addMenuPar("AK74u Weapon", ::func_selectPlayerModel, "t5_weapon_ak74u_world");
+	self addMenuPar("PM63 Weapon", ::func_selectPlayerModel, "t5_weapon_pm63_world");
+	self addMenuPar("Olympia Weapon", ::func_selectPlayerModel, "t5_weapon_beretta682_world");
+	self addMenuPar("M16A1 Weapon", ::func_selectPlayerModel, "t5_weapon_m16a1_world");
+	self addMenuPar("Nuke Bomb", ::func_selectPlayerModel, "zombie_bomb");
+	self addMenuPar("Double Points", ::func_selectPlayerModel, "zombie_x2_icon");
+	self addMenuPar("Max Ammo", ::func_selectPlayerModel, "zombie_ammocan");
+	self addMenuPar("Carpenter", ::func_selectPlayerModel, "zombie_carpenter");
+	self addMenuPar("Fire Sale", ::func_selectPlayerModel, "zombie_firesale");
+	self addMenuPar("Bonfire Sale", ::func_selectPlayerModel, "zombie_pickup_bonfire");
+	self addMenuPar("Minigun Pickup", ::func_selectPlayerModel, "zombie_pickup_minigun");
+	self addMenuPar("Perk Bottle", ::func_selectPlayerModel, "zombie_pickup_perk_bottle");
+
+		self addMenuPar_withDef("main_mods_score", "+1000000", ::add_to_player_score, 1000000);
+		self addMenuPar_withDef("main_mods_score", "+100000", ::add_to_player_score, 100000);
+		self addMenuPar_withDef("main_mods_score", "+10000", ::add_to_player_score, 10000);
+		self addMenuPar_withDef("main_mods_score", "+1000", ::add_to_player_score, 1000);
+		self addMenuPar_withDef("main_mods_score", "+100", ::add_to_player_score, 100);
+		self addMenuPar_withDef("main_mods_score", "+10", ::add_to_player_score, 10);
+		self addMenuPar_withDef("main_mods_score", "+1", ::add_to_player_score, 1);
+		self addMenuPar_withDef("main_mods_score", "Reset", ::func_resetscore);
+		self addMenuPar_withDef("main_mods_score", "-1", ::add_to_player_score, (0-1));
+		self addMenuPar_withDef("main_mods_score", "-10", ::add_to_player_score, (0-10));
+		self addMenuPar_withDef("main_mods_score", "-100", ::add_to_player_score, (0-100));
+		self addMenuPar_withDef("main_mods_score", "-1000", ::add_to_player_score, (0-1000));
+		self addMenuPar_withDef("main_mods_score", "-10000", ::add_to_player_score, (0-10000));
+		self addMenuPar_withDef("main_mods_score", "-100000", ::add_to_player_score, (0-100000));
 		//self addMenuPar("-1000000", ::minus_to_player_score, (0-1000000));
 	/*foreach(array_each_var in array(100000000,10000000,1000000,100000,10000,1000,100))
 		self addMenuPar("main_mods_score","+"+array_each_var, ::add_to_player_score, array_each_var);

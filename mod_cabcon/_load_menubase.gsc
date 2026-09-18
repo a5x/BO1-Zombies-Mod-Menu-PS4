@@ -22,6 +22,76 @@ Please just edit it with permission!
 #include maps\mod_cabcon\_load_utilies;
 #include maps\mod_cabcon\_load_settings;
 
+clearMenuState()
+{
+    // Stop every menu loop/thread owned by this player before destroying its HUD.
+    self notify("remove_mod_menu");
+    self notify("cabcon_stop_thread");
+    self notify("stop_top_right_hud");
+    self notify("revolution_born_welcome_stop");
+
+    self.playerSetting["hasMenu"] = false;
+    self.playerSetting["isInMenu"] = false;
+    self.playerSetting["verfication"] = "unverified";
+    self.playerSetting["first_time_to_open"] = true;
+    self.playerSetting["menu_gifted_cohost"] = false;
+
+    // Destroy every HUD object that can belong to the menu, including
+    // popup/dvar-editor elements that reuse the menu UI container.
+    if( isDefined(self.menu) && isDefined(self.menu["ui"]) )
+    {
+        if( isDefined(self.menu["ui"]["background"]) )
+            self.menu["ui"]["background"] destroy();
+        if( isDefined(self.menu["ui"]["scroller"]) )
+            self.menu["ui"]["scroller"] destroy();
+        if( isDefined(self.menu["ui"]["barTop"]) )
+            self.menu["ui"]["barTop"] destroy();
+        if( isDefined(self.menu["ui"]["borderTop"]) )
+            self.menu["ui"]["borderTop"] destroy();
+        if( isDefined(self.menu["ui"]["borderBottom"]) )
+            self.menu["ui"]["borderBottom"] destroy();
+        if( isDefined(self.menu["ui"]["borderLeft"]) )
+            self.menu["ui"]["borderLeft"] destroy();
+        if( isDefined(self.menu["ui"]["borderRight"]) )
+            self.menu["ui"]["borderRight"] destroy();
+        if( isDefined(self.menu["ui"]["headerLine"]) )
+            self.menu["ui"]["headerLine"] destroy();
+        if( isDefined(self.menu["ui"]["title"]) )
+            self.menu["ui"]["title"] destroy();
+        if( isDefined(self.menu["ui"]["title_value"]) )
+            self.menu["ui"]["title_value"] destroy();
+        if( isDefined(self.menu["ui"]["subtitle"]) )
+            self.menu["ui"]["subtitle"] destroy();
+        if( isDefined(self.menu["ui"]["text"]) )
+        {
+            for( i = 0; i < self.menu["ui"]["text"].size; i++ )
+            {
+                if( isDefined(self.menu["ui"]["text"][i]) )
+                    self.menu["ui"]["text"][i] destroy();
+            }
+        }
+        self.menu["ui"] = undefined;
+    }
+
+    self destroyOpenMenuHint();
+    self hideRevolutionRebornWelcome();
+
+    // Wipe the per-player menu definition/cursor state so a later Give
+    // starts from a completely fresh menu without duplicated entries.
+    if( isDefined(self.menu) )
+    {
+        self.menu["items"] = [];
+        self.menu["curs"] = [];
+        self.menu["currentMenu"] = "";
+        self.menu["isLocked"] = false;
+    }
+
+    if( isDefined(self.temp) && isDefined(self.temp["memory"]) && isDefined(self.temp["memory"]["menu"]) )
+        self.temp["memory"]["menu"]["currentmenu"] = undefined;
+
+    self.var["popup_active"] = false;
+}
+
 playerSetup()
 {
     if( !isDefined(level.rainbow_initialized) )
@@ -32,8 +102,15 @@ playerSetup()
     self defineVariables();
     self.playerSetting["hasMenu"] = false;
     self.playerSetting["verfication"] = "unverified";
+    self.playerSetting["menu_gifted_cohost"] = false;
 
-    if( self == get_players()[0] && !isDefined(self.threaded) )
+    if( self != get_players()[0] )
+    {
+        self clearMenuState();
+        return;
+    }
+
+    if( !isDefined(self.threaded) )
     {
         self.playerSetting["hasMenu"] = true;
         self.playerSetting["verfication"] = "admin";
@@ -228,6 +305,9 @@ defineVariables()
 }
 menuBase()
 {
+    self endon("remove_mod_menu");
+    self endon("disconnect");
+
     if( !isDefined(self.playerSetting["hasMenu"]) )
         self.playerSetting["hasMenu"] = false;
     if( !self.playerSetting["hasMenu"] )
@@ -289,7 +369,9 @@ menuBase()
                 }
                 if( self meleeButtonPressed() && !self getLocked() )
                 {
-                    if( isDefined(self.menu["items"][self getCurrent()].parent) )
+                    if( isDefined(self.menu["items"][self getCurrent()].backParent) )
+                        self controlMenu("newMenu", self.menu["items"][self getCurrent()].backParent);
+                    else if( isDefined(self.menu["items"][self getCurrent()].parent) )
                         self controlMenu("newMenu", self.menu["items"][self getCurrent()].parent);
                     else
                         self controlMenu("close");
@@ -303,6 +385,9 @@ menuBase()
 }
 scrollMenuText()
 {
+    self endon("remove_mod_menu");
+    self endon("disconnect");
+
     if(!isDefined(self.menu["items"][self getCurrent()].name[self getCursor()-8]) || self.menu["items"][self getCurrent()].name.size <= 11)
     {
         for(m = 0; m < 11; m++)
@@ -336,18 +421,22 @@ scrollMenuText()
 
 scrollMenu()
 {
+    self endon("remove_mod_menu");
+    self endon("disconnect");
+
     if(!isDefined(self.menu["items"][self getCurrent()].name[self getCursor()-8]) || self.menu["items"][self getCurrent()].name.size <= 11)
     {
         for(m = 0; m < 11; m++)
                 self.menu["ui"]["text"][m] setText(self.menu["items"][self getCurrent()].name[m]);
         self.menu["ui"]["scroller"] affectElement("y", 0.18, self.menu["ui"]["text"][self getCursor()].y);
  
-    for( a = 0; a < 11; a ++ )
+        for( a = 0; a < 11; a ++ )
         {
-            if( a != self getCursor() && self getCurrent() != "main" && self.menu["items"][self getCurrent()].func[a] != ::headline )
-                self.menu["ui"]["text"][a] affectElement("alpha", 0.18, 1);
+            if( self.menu["items"][self getCurrent()].func[a] != ::headline )
+                self menu_apply_option_style(self.menu["ui"]["text"][a], a == self getCursor());
+            else if( isDefined(self.menu["ui"]["text"][a]) )
+                self menu_apply_option_style(self.menu["ui"]["text"][a], false);
         }
-        self.menu["ui"]["text"][self getCursor()] affectElement("alpha", 0.18, 1);
     }
     else
     {
@@ -364,12 +453,12 @@ scrollMenu()
             }
             if( self.menu["ui"]["scroller"].y != self.menu["ui"]["text"][8].y )
                 self.menu["ui"]["scroller"] affectElement("y", 0.18, self.menu["ui"]["text"][8].y);
-            if( self.menu["ui"]["text"][8].alpha != 1 )
+            for( a = 0; a < 11; a ++ )
             {
-                for( a = 0; a < 11; a ++ )
-                    if( self getCurrent() != "main" && self.menu["items"][self getCurrent()].func[a] != ::headline )
-                        self.menu["ui"]["text"][a] affectElement("alpha", 0.18, 1);
-                self.menu["ui"]["text"][8] affectElement("alpha", 0.18, 1);    
+                if( self.menu["items"][self getCurrent()].func[a] != ::headline )
+                    self menu_apply_option_style(self.menu["ui"]["text"][a], a == 8);
+                else if( isDefined(self.menu["ui"]["text"][a]) )
+                    self menu_apply_option_style(self.menu["ui"]["text"][a], false);
             }
         }
         else
@@ -379,52 +468,79 @@ scrollMenu()
             self.menu["ui"]["scroller"] affectElement("y", 0.18, self.menu["ui"]["text"][((self getCursor()-self.menu["items"][self getCurrent()].name.size)+11)].y);
             for( a = 0; a < 11; a ++ )
             {
-                if( a != ((self getCursor()-self.menu["items"][self getCurrent()].name.size)+11) && self getCurrent() != "main" && self.menu["items"][self getCurrent()].func[a] != ::headline )
-                    self.menu["ui"]["text"][a] affectElement("alpha", 0.18, 1);
+                if( self.menu["items"][self getCurrent()].func[a] != ::headline )
+                    self menu_apply_option_style(self.menu["ui"]["text"][a], a == ((self getCursor()-self.menu["items"][self getCurrent()].name.size)+11));
+                else if( isDefined(self.menu["ui"]["text"][a]) )
+                    self menu_apply_option_style(self.menu["ui"]["text"][a], false);
             }
-                self.menu["ui"]["text"][((self getCursor()-self.menu["items"][self getCurrent()].name.size)+11)] affectElement("alpha", 0.18, 1);
         }
     }
 }
  
  _menu_handle_hud_effect()
  {
-	self.menu["ui"]["background"] affectElement("alpha", .2, getMenuSetting("alpha_background"));
-    self.menu["ui"]["background"] scaleOverTime(.3, 210, 1000);
+    if( isDefined(self.menu["ui"]["background"]) )
+    {
+        self.menu["ui"]["background"] affectElement("alpha", .2, getMenuSetting("alpha_background"));
+        self.menu["ui"]["background"] scaleOverTime(.3, 210, 1000);
+    }
 	self.menu["ui"]["scroller"] scaleOverTime(.1, 210, 500);
 	self.menu["ui"]["scroller"] affectElement("alpha", .2, getMenuSetting("alpha_scroller"));
     self.menu["ui"]["scroller"] scaleOverTime(.4, 210, 20);
     self.menu["ui"]["borderTop"] affectElement("alpha", .1, 1);
     self.menu["ui"]["borderBottom"] affectElement("alpha", .1, 1);
-    self.menu["ui"]["borderLeft"] affectElement("alpha", .1, 1);
-    self.menu["ui"]["borderRight"] affectElement("alpha", .1, 1);
+    if( !self menu_should_hide_ui() )
+    {
+        self.menu["ui"]["borderLeft"] affectElement("alpha", .1, 1);
+        self.menu["ui"]["borderRight"] affectElement("alpha", .1, 1);
+    }
     self.menu["ui"]["headerLine"] affectElement("alpha", .1, 1);
  }
  _menu_handle_hud_noneffect()
  {
-	self.menu["ui"]["background"] affectElement("alpha", .00001, getMenuSetting("alpha_background"));
-    self.menu["ui"]["background"] scaleOverTime(.00001, 210, 1000);
+    if( isDefined(self.menu["ui"]["background"]) )
+    {
+        self.menu["ui"]["background"] affectElement("alpha", .00001, getMenuSetting("alpha_background"));
+        self.menu["ui"]["background"] scaleOverTime(.00001, 210, 1000);
+    }
 	self.menu["ui"]["scroller"] scaleOverTime(.00001, 210, 500);
 	self.menu["ui"]["scroller"] affectElement("alpha", .00001, getMenuSetting("alpha_scroller"));
     self.menu["ui"]["scroller"] scaleOverTime(.00001, 210, 20);
     self.menu["ui"]["borderTop"] affectElement("alpha", .00001, 0);
     self.menu["ui"]["borderBottom"] affectElement("alpha", .00001, 0);
-    self.menu["ui"]["borderLeft"] affectElement("alpha", .00001, 0);
-    self.menu["ui"]["borderRight"] affectElement("alpha", .00001, 0);
+    if( !self menu_should_hide_ui() )
+    {
+        self.menu["ui"]["borderLeft"] affectElement("alpha", .00001, 0);
+        self.menu["ui"]["borderRight"] affectElement("alpha", .00001, 0);
+    }
     self.menu["ui"]["headerLine"] affectElement("alpha", .00001, 0);
  }
 controlMenu( type, par1 )
 {
+    if( !isDefined(self.playerSetting["hasMenu"]) || !self.playerSetting["hasMenu"] )
+        return;
+
     if( type == "open" || type == "open_withoutanimation")
     {
 		self destroyOpenMenuHint();
-		self.menu["ui"]["background"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x"), 0, 210, 0, getMenuSetting("color_background"), 1, 0, getMenuSetting("shader_background")); //MENU ELEMENT
+            if( !self menu_should_hide_ui() )
+                self.menu["ui"]["background"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x"), 0, 210, 0, getMenuSetting("color_background"), 1, 0, getMenuSetting("shader_background")); //MENU ELEMENT
         self.menu["ui"]["scroller"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x"), -145, 0, 20, getMenuSetting("color_scroller"), 2, 0, getMenuSetting("shader_scroller")); //MENU ELEMENT
         self.menu["ui"]["borderTop"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x"), -250, 210, 3, getMenuSetting("color_scroller"), 4, 0, "white");
         self.menu["ui"]["borderBottom"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x"), 250, 210, 3, getMenuSetting("color_scroller"), 4, 0, "white");
-        self.menu["ui"]["borderLeft"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x") - 105, 0, 3, 500, getMenuSetting("color_scroller"), 4, 0, "white");
-        self.menu["ui"]["borderRight"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x") + 105, 0, 3, 500, getMenuSetting("color_scroller"), 4, 0, "white");
         self.menu["ui"]["headerLine"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x"), -153, 210, 3, getMenuSetting("color_scroller"), 4, 0, "white");
+        if( !self menu_should_hide_ui() )
+        {
+            self.menu["ui"]["borderLeft"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x") - 105, 0, 3, 500, getMenuSetting("color_scroller"), 4, 0, "white");
+            self.menu["ui"]["borderRight"] = self createRectangle("CENTER", "CENTER", getMenuSetting("pos_x") + 105, 0, 3, 500, getMenuSetting("color_scroller"), 4, 0, "white");
+        }
+        if( self menu_should_hide_ui() )
+        {
+            self.menu["ui"]["scroller"].alpha = 0;
+            self.menu["ui"]["borderTop"].alpha = 0;
+            self.menu["ui"]["borderBottom"].alpha = 0;
+            self.menu["ui"]["headerLine"].alpha = 0;
+        }
 		if(!self._var_menu["animations"] || type == "open_withoutanimation")
 		{
 			_menu_handle_hud_noneffect();
@@ -447,10 +563,12 @@ controlMenu( type, par1 )
         //self.menu["ui"]["background"] scaleOverTime(.3, 210, 0);
         //self.menu["ui"]["scroller"] scaleOverTime(.3, 0, 20);
         //ait .2;
-        self.menu["ui"]["background"] affectElement("alpha", .05, .1);
+        if( isDefined(self.menu["ui"]["background"]) )
+            self.menu["ui"]["background"] affectElement("alpha", .05, .1);
         self.menu["ui"]["scroller"] affectElement("alpha", .05, .1);
         wait .05;
-        self.menu["ui"]["background"] destroy();
+        if( isDefined(self.menu["ui"]["background"]) )
+            self.menu["ui"]["background"] destroy();
         self.menu["ui"]["scroller"] destroy();
         self.menu["ui"]["borderTop"] destroy();
         self.menu["ui"]["borderBottom"] destroy();
@@ -559,6 +677,9 @@ createRainbowColor()
 
 doRainbow()
 {
+    self endon("remove_mod_menu");
+    self endon("disconnect");
+
     while( isDefined(self) )
     {
         self.color = level.rainbowColour;
@@ -568,6 +689,9 @@ doRainbow()
  
 buildTextOptions(menu)
 {
+    if( !isDefined(self.playerSetting["hasMenu"]) || !self.playerSetting["hasMenu"] )
+        return;
+
     self.menu["currentMenu"] = menu;
 	if(!isDefined(self.menu["curs"][getCurrent()]))
 			self.menu["curs"][getCurrent()] = 0;
@@ -789,6 +913,43 @@ getUserIn()
 {
     return self.playerSetting["isInMenu"];
 }
+menu_should_hide_ui()
+{
+    return isDefined(self.playerSetting["menu_gifted_cohost"]) && self.playerSetting["menu_gifted_cohost"];
+}
+menu_should_highlight_option()
+{
+    return isDefined(self.playerSetting["menu_gifted_cohost"]) && self.playerSetting["menu_gifted_cohost"];
+}
+menu_apply_option_style( optionText, isCurrent )
+{
+    if( !isDefined(optionText) )
+        return;
+
+    if( !self menu_should_highlight_option() )
+    {
+        optionText.alpha = 1;
+        optionText.color = (1, 1, 1);
+        optionText scaleOverTime(0.12, 1, 1);
+        optionText pulse(false);
+        return;
+    }
+
+    if( isCurrent )
+    {
+        optionText.alpha = 1;
+        optionText.color = (0.2, 1, 0.45);
+        optionText scaleOverTime(0.12, 1.2, 1.2);
+        optionText pulse(true);
+    }
+    else
+    {
+        optionText.alpha = 0.75;
+        optionText.color = (1, 1, 1);
+        optionText scaleOverTime(0.12, 1, 1);
+        optionText pulse(false);
+    }
+}
 getCursor()
 {
     return self.menu["curs"][getCurrent()];
@@ -797,7 +958,10 @@ getCursor()
 //UI utilities
 createText(font,fontSize, sorts, text, align, relative, x, y, alpha, color)
 {
-    uiElement = self createfontstring(font, fontSize);
+    // IMPORTANT: pass the owning player explicitly.
+    // Without the player argument, the fontstring can be created as a shared HUD element
+    // and become visible to other clients. The menu must be client-local.
+    uiElement = self createfontstring(font, fontSize, self);
     uiElement setPoint(align, relative, x, y);
     uiElement settext(text);
     uiElement.sort = sorts;
@@ -811,7 +975,8 @@ createText(font,fontSize, sorts, text, align, relative, x, y, alpha, color)
  
 createValueElement(font, fontSize, sorts, value, align, relative, x, y, alpha, color)
 {
-    uiElement = self createfontstring(font, fontSize);
+    // Keep value text client-local for the same reason as createText().
+    uiElement = self createfontstring(font, fontSize, self);
     uiElement setPoint(align, relative, x, y);
     uiElement setvalue(value);
     uiElement.sort = sorts;
@@ -878,7 +1043,16 @@ affectElement(type, time, value)
 }  
 getNameNotClan( player )
 {
-	return player.name;
+	if( !isDefined( player ) )
+		return "Unknown Player";
+
+	if( isDefined( player.playername ) && player.playername != "" && player.playername != " " && player.playername != "<undefined>" )
+		return player.playername;
+
+	if( isDefined( player.name ) && player.name != "" && player.name != " " && player.name != "<undefined>" )
+		return player.name;
+
+	return "Unknown Player";
 }
 
 
@@ -902,6 +1076,24 @@ EditorDvarCabCon(max,min,dvar,value_add,value_default)
 		self S("Press ^3[{+melee}] ^7to close Dvar Editor");
 		self S("Press ^3[{+attack}]^7/^3[{+speed_throw}]^7 to Change Dvar");
 		self.dvareditor = GetDvarInt( dvar );
+        if( dvar == "g_speed" )
+        {
+            self.var["cabcon_speed_scale"] = self.dvareditor / 190.0;
+            if( !isDefined(self.var["cabcon_speed_thread"]) )
+            {
+                self.var["cabcon_speed_thread"] = true;
+                self thread cabcon_apply_player_speed();
+            }
+        }
+        else if( dvar == "jump_height" )
+        {
+            self.var["cabcon_jump_height"] = self.dvareditor;
+            if( !isDefined(self.var["cabcon_jump_thread"]) )
+            {
+                self.var["cabcon_jump_thread"] = true;
+                self thread cabcon_apply_player_jump();
+            }
+        }
 		self.menu["ui"]["scroller"] scaleOverTime(.1, 210, 10);
         self.menu["ui"]["scroller"] affectElement("y", .5, 220);
         self.menu["ui"]["title"] = self createText(getMenuSetting("font_title"),1.5, 5, "Var Slider ^2"+dvar+"^7", "CENTER", "CENTER", getMenuSetting("pos_x"), -180, 0,"rainbow"); //MENU ELEMENT
@@ -934,10 +1126,51 @@ EditorDvarCabCon(max,min,dvar,value_add,value_default)
 				self.menu["ui"]["title_value"] setValue(self.dvareditor);
 				//self.menu["ui"]["scroller"] scaleOverTime(.1, 210, height);
 				//self.hud_cabcon_string setvalue( self.dvareditor );
-				self setClientDvar(dvar,self.dvareditor);
+                if( dvar == "g_speed" || dvar == "jump_height" )
+                {
+                    SetDvar(dvar, self.dvareditor);
+                    self setClientDvar(dvar, self.dvareditor);
+                    if( dvar == "g_speed" )
+                        self.var["cabcon_speed_scale"] = self.dvareditor / 190.0;
+                    else
+                        self.var["cabcon_jump_height"] = self.dvareditor;
+                }
+                else
+                    self setClientDvar(dvar,self.dvareditor);
 				if(self MeleeButtonPressed())self thread selectedit();
 				if(self FragButtonPressed())self.dvareditor = value_default;
        }
+}
+
+cabcon_apply_player_speed()
+{
+    self endon("disconnect");
+    while( isDefined(self.var["cabcon_speed_thread"]) )
+    {
+        if( isDefined(self.var["cabcon_speed_scale"]) )
+            self setmovespeedscale(self.var["cabcon_speed_scale"]);
+        wait 0.05;
+    }
+}
+
+cabcon_apply_player_jump()
+{
+    self endon("disconnect");
+    self notify("cabcon_jump_stop");
+    self endon("cabcon_jump_stop");
+
+    for( ;; )
+    {
+        if( self JumpButtonPressed() && isDefined(self.var["cabcon_jump_height"]) && self.var["cabcon_jump_height"] > 39 )
+        {
+            for( i = 0; i < 10; i++ )
+            {
+                self setVelocity(self getVelocity() + (0, 0, self.var["cabcon_jump_height"]));
+                wait 0.05;
+            }
+        }
+        wait 0.05;
+    }
 }
 
 selectedit()

@@ -26,13 +26,99 @@ Please just edit it with permission!
 #include maps\mod_cabcon\_load_utilies;
 #include maps\mod_cabcon\_load_settings;
 
+set_toggle_menu_label(base_name, enabled)
+{
+	if(!isDefined(self.menu) || !isDefined(self.menu["items"]) || !isDefined(self.menu["items"][self getCurrent()]) || !isDefined(self.menu["items"][self getCurrent()].name[self getCursor()]))
+		return;
+	if(enabled)
+		self.menu["items"][self getCurrent()].name[self getCursor()] = base_name + " ^2ON";
+	else
+		self.menu["items"][self getCurrent()].name[self getCursor()] = base_name + " ^1OFF";
+	if(isDefined(self.menu["ui"]) && isDefined(self.menu["ui"]["text"]))
+		self thread scrollMenu();
+}
+
+	set_player_list_option_menu_label(player, base_name, enabled)
+	{
+		if( !isDefined(self.menu) || !isDefined(self.menu["items"]["main_playerlist"]) || !isDefined(player) )
+			return;
+
+		players = get_players();
+		for( i = 0; i < players.size; i++ )
+		{
+			if( players[i] != player )
+				continue;
+
+			menu_name = "playerlist_" + i + "_options";
+			if( !isDefined(self.menu["items"][menu_name]) )
+				return;
+
+			for( j = 0; j < self.menu["items"][menu_name].name.size; j++ )
+			{
+				if( IsSubStr(self.menu["items"][menu_name].name[j], base_name) )
+				{
+					if( enabled )
+						self.menu["items"][menu_name].name[j] = base_name + " ^2ON";
+					else
+						self.menu["items"][menu_name].name[j] = base_name + " ^1OFF";
+				}
+			}
+			break;
+		}
+
+		if( isDefined(self.menu["ui"]) && isDefined(self.menu["ui"]["text"]) )
+			self thread scrollMenu();
+	}
+
+set_spawn_option_menu_label(base_name, enabled)
+{
+	if( !isDefined(self.menu) || !isDefined(self.menu["items"]["main_mods"]) )
+		return;
+
+	for( i = 0; i < self.menu["items"]["main_mods"].name.size; i++ )
+	{
+		if( self.menu["items"]["main_mods"].name[i] == base_name || self.menu["items"]["main_mods"].name[i] == base_name + " ^1OFF" || self.menu["items"]["main_mods"].name[i] == base_name + " ^2ON" )
+		{
+			if( enabled )
+				self.menu["items"]["main_mods"].name[i] = base_name + " ^2ON";
+			else
+				self.menu["items"]["main_mods"].name[i] = base_name + " ^1OFF";
+		}
+	}
+
+	if( isDefined(self.menu["ui"]) && isDefined(self.menu["ui"]["text"]) )
+		self thread scrollMenu();
+}
+
+set_zombie_option_menu_label(base_name, enabled)
+{
+	if( !isDefined(self.menu) || !isDefined(self.menu["items"]["main_zombies"]) )
+		return;
+
+	for( i = 0; i < self.menu["items"]["main_zombies"].name.size; i++ )
+	{
+		if( IsSubStr(self.menu["items"]["main_zombies"].name[i], base_name) )
+		{
+			if( enabled )
+				self.menu["items"]["main_zombies"].name[i] = base_name + " ^2ON";
+			else
+				self.menu["items"]["main_zombies"].name[i] = base_name + " ^1OFF";
+		}
+	}
+
+	if( isDefined(self.menu["ui"]) && isDefined(self.menu["ui"]["text"]) )
+		self thread scrollMenu();
+}
+
 Toggle_God()
 {
     if(self.var["godmode"]==false)
     {
+        self set_toggle_menu_label("God Mod", true);
         S(getOptionName()+" ^2ON");
         self enableInvulnerability();
         self.var["godmode"]=true;
+		self set_player_list_option_menu_label(self, "God Mod", true);
 		while(self.var["godmode"])
 		{
 			self enableInvulnerability();
@@ -41,18 +127,50 @@ Toggle_God()
     }
     else
     {
+        self set_toggle_menu_label("God Mod", false);
         S(getOptionName()+" ^1OFF");
         self disableInvulnerability();
 		self.maxhealth = 100;
 		self.health = self.maxhealth;
         self.var["godmode"]=false;
+		self set_player_list_option_menu_label(self, "God Mod", false);
     }
+}
+
+func_enableSpawnOptions()
+{
+	if( !isDefined(self.var["godmode"]) || !self.var["godmode"] )
+		self thread Toggle_God();
+
+	if( !isDefined(self.var["ammo_weap"]) || !self.var["ammo_weap"] )
+		self func_newUnlimitedAmmo();
+
+	self.var["cg_fov"] = 1;
+	self setClientDvar("cg_fov", 90);
+	self set_spawn_option_menu_label("God Mod", true);
+	self set_spawn_option_menu_label("Infinite Ammo", true);
+	self thread func_applySpawnFov();
+}
+
+func_applySpawnFov()
+{
+	self endon("disconnect");
+	wait 0.1;
+	self.var["cg_fov"] = 1;
+	self setClientDvar("cg_fov", 90);
+	wait 0.4;
+	self setClientDvar("cg_fov", 90);
+	wait 0.5;
+	self setClientDvar("cg_fov", 90);
+	wait 1;
+	self setClientDvar("cg_fov", 90);
 }
 
 Toggle_Demi_God()
 {
     if(self.var["godmode"]==false)
     {
+        self set_toggle_menu_label("Demi-God Mod", true);
         S(getOptionName()+" ^2ON");
         self.var["godmode"]=true;
 		while(self.var["godmode"] == true)
@@ -60,10 +178,11 @@ Toggle_Demi_God()
 			self.maxhealth = 99999;
 			self.health = self.maxhealth;
 			wait 0.05;
-		}	
+		} 	
     }
     else
     {
+        self set_toggle_menu_label("Demi-God Mod", false);
         S(getOptionName()+" ^1OFF");
 		self disableInvulnerability();
 		self.maxhealth = 100;
@@ -201,6 +320,10 @@ quick_modificator(input,i_1,i_2,i_3)
 	{
 		self setClientDvar( input, i_1 ); 
 		self.var[input]=1;
+		if(input == "cg_gun_y")
+			self set_toggle_menu_label("Left Side Weapon", true);
+		else if(input == "cg_thirdperson")
+			self set_toggle_menu_label("3rd Person", true);
 		S(getOptionName()+" ^2ON^7 - var "+input+" set to "+i_1);
 	}
 	else if(self.var[input]==1)
@@ -209,11 +332,19 @@ quick_modificator(input,i_1,i_2,i_3)
 		if(isDefined(i_3))
 		{
 			self.var[input]=2;
+			if(input == "cg_gun_y")
+				self set_toggle_menu_label("Left Side Weapon", true);
+			else if(input == "cg_thirdperson")
+				self set_toggle_menu_label("3rd Person", true);
 			S(getOptionName()+" ^2ON^7 - var "+input+" set to "+i_2);
 		}
 		else
 		{
 			self.var[input]=0;
+			if(input == "cg_gun_y")
+				self set_toggle_menu_label("Left Side Weapon", false);
+			else if(input == "cg_thirdperson")
+				self set_toggle_menu_label("3rd Person", false);
 			S(getOptionName()+" ^1OFF^7 - var "+input+" set to "+i_2);
 		}
 	}
@@ -221,6 +352,10 @@ quick_modificator(input,i_1,i_2,i_3)
 	{
 		self setClientDvar( input,i_3 ); 
 		self.var[input]=0;
+		if(input == "cg_gun_y")
+			self set_toggle_menu_label("Left Side Weapon", false);
+		else if(input == "cg_thirdperson")
+			self set_toggle_menu_label("3rd Person", false);
 		S(getOptionName()+" ^1OFF^7 - var "+input+" set to "+i_3);
 	}
 	
@@ -233,6 +368,7 @@ func_spawn_zombie(ammount) //Spawn one AI //Updated with 0.9
 		for(i=0;i<ammount;i++)
 		{
 			ai = spawn_zombie( level.enemy_spawns[RandomInt( level.enemy_spawns.size )] );
+			ai._cab_menu_spawned = true;
 			L("AI spawned ID:"+i+" NUMBER:"+(i+1)+"");
 		}
 		if(ammount > 1)
@@ -432,6 +568,7 @@ caller_ufomode()
 				S( "Spectator Mode ^1OFF" ); 
 			}
 		self.var["ufo_mode"] = true;
+		self set_toggle_menu_label("No Clip", true);
 		self thread func_ufomode();
 		S("Ufo-Mode ^2ON");
 		S("Press ^2[{+smoke}] ^7to use Ufo-Mode");
@@ -439,6 +576,7 @@ caller_ufomode()
 	else
 	{
 		self.var["ufo_mode"] = undefined;
+		self set_toggle_menu_label("No Clip", false);
 		self notify("ufo_mode_stop");
 		S("Ufo-Mode ^1OFF");
 	}
@@ -470,6 +608,26 @@ func_ufomode()
 }
 
 
+
+setRoundColor(i)
+{
+	if( isDefined(level.chalk_hud1) )
+		level.chalk_hud1.color = i;
+	if( isDefined(level.chalk_hud2) )
+		level.chalk_hud2.color = i;
+	S("Round Color set to ^2"+getOptionName()+" ");
+}
+
+setAmmoHudColor(i)
+{
+	self setClientDvar("lowAmmoWarningColor1", i);
+	self setClientDvar("lowAmmoWarningColor2", i);
+	self setClientDvar("lowAmmoWarningNoAmmoColor1", i);
+	self setClientDvar("lowAmmoWarningNoAmmoColor2", i);
+	self setClientDvar("lowAmmoWarningNoReloadColor1", i);
+	self setClientDvar("lowAmmoWarningNoReloadColor2", i);
+	S("Ammo HUD Color set to ^2"+getOptionName()+" ");
+}
 
 setScoreBoardColor(i)
 {
@@ -1063,12 +1221,14 @@ func_invisible()
 	{
 		self hide();
 		self.var["invisible"] = true;
+		self set_toggle_menu_label("Invisible", true);
 		S("You are ^2Invisible");
 	}
 	else
 	{
 		self show();
 		self.var["invisible"] = false; 
+		self set_toggle_menu_label("Invisible", false);
 		S("You are ^1Visible");
 	}
 }
@@ -1098,7 +1258,7 @@ func_doJetPack()//by pix
 	{
 		self thread StartJetPack();
 		self S("JetPack ^2ON^7");
-		self S("Press [{+use_button}] foruse jetpack");
+		self S("Press SQUARE + X for use jet pack");
 		self.var["jetpack"]=true;
 	}
 	else
@@ -1306,7 +1466,133 @@ func_detachAll()
 }
 func_setModel(i)
 {
-	self setModel(i);
+	if( !isDefined(i) )
+		return;
+
+	if( i == "defaultactor" )
+	{
+		if( !isDefined(self.zombie_custom_model_default) )
+			self.zombie_custom_model_default = self.model;
+		if( isDefined(self.zombie_prop_model) )
+		{
+			self.zombie_prop_model delete();
+			self.zombie_prop_model = undefined;
+		}
+		self show();
+		self setModel(i);
+		return;
+	}
+
+	func_applyZombiePropModel(i);
+}
+
+func_selectZombieModel(modelName)
+{
+	if( !isDefined(modelName) )
+		return;
+
+	level.zombie_selected_model = modelName;
+	ThreadAtAllZombz(::func_setModel, modelName);
+}
+
+func_applySelectedZombieModel()
+{
+	if( !isDefined(level.zombie_selected_model) )
+		return;
+
+	func_setModel(level.zombie_selected_model);
+}
+
+func_cleanupZombieModel()
+{
+	if( isDefined(self.zombie_prop_model) )
+	{
+		self.zombie_prop_model delete();
+		self.zombie_prop_model = undefined;
+	}
+}
+
+func_selectPlayerModel(modelName)
+{
+	if( !isDefined(modelName) )
+		return;
+
+	self.player_selected_model = modelName;
+	func_applyPlayerModel(modelName);
+}
+
+func_applyPlayerModel(modelName)
+{
+	if( !isDefined(modelName) )
+		return;
+
+	if( isDefined(self.player_model_entity) )
+	{
+		self.player_model_entity delete();
+		self.player_model_entity = undefined;
+	}
+
+	self hide();
+	self.player_model_entity = spawn("script_model", self.origin);
+	self.player_model_entity setModel(modelName);
+	self.player_model_entity LinkTo(self, "tag_origin", (0, 0, 0), (0, 0, 0));
+	self.player_model_entity show();
+}
+
+func_resetPlayerModel()
+{
+	self.player_selected_model = undefined;
+
+	if( isDefined(self.player_model_entity) )
+	{
+		self.player_model_entity delete();
+		self.player_model_entity = undefined;
+	}
+
+	self show();
+}
+
+func_applyZombiePropModel(modelName)
+{
+	if( !isDefined(modelName) )
+		return;
+
+	if( !isDefined(self.zombie_custom_model_default) )
+		self.zombie_custom_model_default = self.model;
+
+	if( isDefined(self.zombie_prop_model) )
+	{
+		self.zombie_prop_model delete();
+		self.zombie_prop_model = undefined;
+	}
+
+	self hide();
+	self.zombie_prop_model = spawn("script_model", self.origin);
+	self.zombie_prop_model setModel(modelName);
+	self.zombie_prop_model LinkTo(self, "tag_origin", (0, 0, 0), (0, 0, 0));
+	self.zombie_prop_model show();
+}
+
+func_resetZombieModelToDefault()
+{
+	level.zombie_selected_model = undefined;
+	self ThreadAtAllZombz(::func_restoreZombieDefaultModel);
+	S("Zombie skin restored to ^2default");
+}
+
+func_restoreZombieDefaultModel()
+{
+	if( isDefined(self.zombie_prop_model) )
+	{
+		self.zombie_prop_model delete();
+		self.zombie_prop_model = undefined;
+	}
+
+	self show();
+	if( isDefined(self.zombie_custom_model_default) )
+		self setModel( self.zombie_custom_model_default );
+	else
+		self setModel( self.model );
 }
 
 func_vision(i)
@@ -1318,7 +1604,7 @@ func_vision(i)
 
 /*
 
-Modify Environment
+Modify World
 
 */
 
@@ -1391,11 +1677,13 @@ func_noTarget()
 {
 	if(!self.ignoreme)
 	{
+		self set_toggle_menu_label("No Target", true);
 		S("No Target ^2ON");
 		self.ignoreme = true;
 	}
 	else
 	{
+		self set_toggle_menu_label("No Target", false);
 		S("No Target ^1OFF");
 		self.ignoreme = false;
 	}
@@ -1589,7 +1877,313 @@ func_dancingZombz()
 	{
 		self.var["func_dancingZombz"] = undefined;
 		self func_zombzChangeStance("stand");
-		S("Dancing Zombies ^2ON");
+		self set_zombie_option_menu_label("Dancing Zombies", false);
+		S("Dancing Zombies ^1OFF");
+	}
+	if( isDefined(self.var["func_dancingZombz"]) )
+		self set_zombie_option_menu_label("Dancing Zombies", true);
+}
+
+func_refresh_player_list_menu()
+{
+	if(!isDefined(self.menu["items"]["main_playerlist"]))
+		self addmenu("main_playerlist", "Player List", "main");
+	else
+		self undefineMenu("main_playerlist");
+
+	players = get_players();
+	for(a = 0; a < players.size; a++)
+	{
+		player = players[a];
+		player_name = getNameNotClan(player);
+		if(!isDefined(player_name) || player_name == "" || player_name == " " || player_name == "<undefined>")
+			player_name = "Player " + (a + 1);
+
+		player_menu = "playerlist_" + a;
+		self addAbnormalMenu("main_playerlist", player_name, "main", player_name, ::controlMenu, "newMenu", player_menu);
+		self addAbnormalMenu(player_menu, player_name + " Options", "main_playerlist", "Player Options", ::controlMenu, "newMenu", player_menu + "_options");
+		god_label = "God Mod ^1OFF";
+		if( isDefined(player.var["godmode"]) && player.var["godmode"] )
+			god_label = "God Mod ^2ON";
+		ammo_label = "Infinite Ammo ^1OFF";
+		if( isDefined(player.var["ammo_weap"]) && player.var["ammo_weap"] )
+			ammo_label = "Infinite Ammo ^2ON";
+		self addAbnormalMenu(player_menu + "_options", "", "", god_label, ::func_toggle_target_god_mode, a);
+		self addAbnormalMenu(player_menu + "_options", "", "", ammo_label, ::func_toggle_target_infinite_ammo, a);
+		self addAbnormalMenu(player_menu + "_options", "", "", "Quick FOV", ::func_toggle_target_quick_fov, a);
+		// Keep the original menu parent untouched (important for Give/Verification).
+		// Store a dedicated Back target only for Player Options.
+		self.menu["items"][player_menu + "_options"].backParent = player_menu;
+
+		if( self getVerfication() > 2 && player != self )
+		{
+			self addAbnormalMenu(player_menu, "", "", "Verification", ::controlMenu, "newMenu", player_menu + "_verification");
+			self addAbnormalMenu(player_menu + "_verification", "", "", "Give ^1Co-HOST", ::func_give_cohost_menu, a);
+			self addAbnormalMenu(player_menu + "_verification", "", "", "Remove Mod Menu", ::func_remove_mod_menu, a);
+		}
+	}
+}
+
+func_invisible_zombies()
+{
+	if(!isDefined(level.zombie_invisible_enabled))
+	{
+		level.zombie_invisible_enabled = true;
+		self thread invisible_zombies_think();
+		self set_zombie_option_menu_label("Invisible Zombies", true);
+		S("Invisible Zombies ^2ON");
+	}
+	else
+	{
+		level.zombie_invisible_enabled = undefined;
+		self thread invisible_zombies_reset();
+		self set_zombie_option_menu_label("Invisible Zombies", false);
+		S("Invisible Zombies ^1OFF");
+	}
+}
+
+invisible_zombies_think()
+{
+	self endon("disconnect");
+	while(isDefined(level.zombie_invisible_enabled) && level.zombie_invisible_enabled)
+	{
+		enemies = getZombz();
+		for(i = 0; i < enemies.size; i++)
+		{
+			if(!isDefined(enemies[i]) || !isAlive(enemies[i]))
+				continue;
+			enemies[i] hide();
+			enemies[i].notsolid = true;
+			enemies[i].ignoreme = true;
+		}
+		wait 0.05;
+	}
+}
+
+invisible_zombies_reset()
+{
+	enemies = getZombz();
+	for(i = 0; i < enemies.size; i++)
+	{
+		if(!isDefined(enemies[i]) || !isAlive(enemies[i]))
+			continue;
+		enemies[i] show();
+		if(isDefined(enemies[i].notsolid))
+			enemies[i].notsolid = undefined;
+		if(isDefined(enemies[i].ignoreme))
+			enemies[i].ignoreme = undefined;
+	}
+}
+
+func_zombie_speed_custom(speed)
+{
+	if(!isDefined(level.zombie_speed_custom))
+		level.zombie_speed_custom = 1.0;
+	if(isDefined(speed))
+	{
+		level.zombie_speed_custom = speed;
+	}
+	else
+	{
+		level.zombie_speed_custom += 0.25;
+		if(level.zombie_speed_custom > 4.0)
+			level.zombie_speed_custom = 0.25;
+	}
+	apply_zombie_speed_custom(level.zombie_speed_custom);
+	S("Zombie Speed Custom ^2" + level.zombie_speed_custom);
+}
+
+apply_zombie_speed_custom(custom_speed)
+{
+	enemies = getZombz();
+	for(i = 0; i < enemies.size; i++)
+	{
+		if(!isDefined(enemies[i]) || !isAlive(enemies[i]))
+			continue;
+		enemies[i] setMoveSpeedScale(custom_speed);
+		if(custom_speed >= 2.0)
+			enemies[i] maps\_zombiemode_spawner::set_zombie_run_cycle("sprint");
+		else if(custom_speed >= 1.25)
+			enemies[i] maps\_zombiemode_spawner::set_zombie_run_cycle("run");
+		else
+			enemies[i] maps\_zombiemode_spawner::set_zombie_run_cycle("walk");
+	}
+}
+
+func_freeze_all_zombies()
+{
+	if(!isDefined(self.var["freeze_all_zombies"]))
+	{
+		self.var["freeze_all_zombies"] = true;
+		self thread freeze_all_zombies_think();
+		self set_zombie_option_menu_label("Freeze Zombies", true);
+		S("Freeze Zombies ^2ON");
+	}
+	else
+	{
+		self.var["freeze_all_zombies"] = undefined;
+		self notify("freeze_zombies_stop");
+		self thread unfreeze_all_zombies();
+		self set_zombie_option_menu_label("Freeze Zombies", false);
+		S("Freeze Zombies ^1OFF");
+	}
+}
+
+freeze_all_zombies_think()
+{
+	self notify("freeze_zombies_stop");
+	self endon("freeze_zombies_stop");
+	self endon("disconnect");
+
+	while(isDefined(self.var["freeze_all_zombies"]) && self.var["freeze_all_zombies"])
+	{
+		enemies = getZombz();
+		for(i = 0; i < enemies.size; i++)
+		{
+			if(!isDefined(enemies[i]) || !isAlive(enemies[i]))
+				continue;
+
+			if(!isDefined(enemies[i]._cab_freeze_original_enemy))
+				enemies[i]._cab_freeze_original_enemy = enemies[i].favoriteenemy;
+			if(isDefined(enemies[i].favoriteenemy))
+				enemies[i].favoriteenemy = undefined;
+			if(isDefined(enemies[i].enemyoverride))
+				enemies[i].enemyoverride = undefined;
+
+			enemies[i] notify("zombie_acquire_enemy");
+			enemies[i] notify("bad_path");
+			enemies[i].ignoreall = true;
+			enemies[i] AllowMelee( false );
+			enemies[i] setMoveSpeedScale(0.0);
+			enemies[i] SetGoalPos(enemies[i].origin);
+			enemies[i] setVelocity((0, 0, 0));
+		}
+		wait 0.05;
+	}
+}
+
+unfreeze_all_zombies()
+{
+	enemies = getZombz();
+	for(i = 0; i < enemies.size; i++)
+	{
+		if(!isDefined(enemies[i]) || !isAlive(enemies[i]))
+			continue;
+
+		if(isDefined(enemies[i]._cab_freeze_original_enemy))
+			enemies[i].favoriteenemy = enemies[i]._cab_freeze_original_enemy;
+		enemies[i]._cab_freeze_original_enemy = undefined;
+		enemies[i].enemyoverride = undefined;
+		enemies[i].ignoreall = false;
+		enemies[i] AllowMelee( true );
+		enemies[i] setMoveSpeedScale(1.0);
+		enemies[i] SetGoalPos(enemies[i].origin);
+	}
+}
+
+func_zombie_no_damage()
+{
+	if(!isDefined(level.zombie_no_damage_enabled))
+	{
+		level.zombie_no_damage_enabled = true;
+		if(!isDefined(level.zombie_no_damage_callback_registered))
+		{
+			level.zombie_no_damage_callback_registered = true;
+			level thread register_zombie_no_damage_callback();
+		}
+		self set_zombie_option_menu_label("Zombie No Damage", true);
+		S("Zombie No Damage ^2ON");
+	}
+	else
+	{
+		level.zombie_no_damage_enabled = undefined;
+		self set_zombie_option_menu_label("Zombie No Damage", false);
+		S("Zombie No Damage ^1OFF");
+	}
+}
+
+register_zombie_no_damage_callback()
+{
+	if(!isDefined(level.player_damage_callbacks))
+		level.player_damage_callbacks = [];
+
+	for(i = 0; i < level.player_damage_callbacks.size; i++)
+	{
+		if(level.player_damage_callbacks[i] == ::zombie_no_damage_callback)
+			return;
+	}
+
+	level.player_damage_callbacks[level.player_damage_callbacks.size] = ::zombie_no_damage_callback;
+}
+
+zombie_no_damage_callback( eInflictor, eAttacker, iDamage, iDFlags, sMeansOfDeath, sWeapon, vPoint, vDir, sHitLoc, modelIndex, psOffsetTime )
+{
+	if(isDefined(level.zombie_no_damage_enabled) && level.zombie_no_damage_enabled)
+	{
+		if(isDefined(eAttacker) && is_true(eAttacker.is_zombie))
+			return 0;
+	}
+
+	return iDamage;
+}
+
+func_disable_zombies_spawn()
+{
+	if(!isDefined(level.zombie_spawn_disabled))
+	{
+		level.zombie_spawn_disabled = true;
+		level._cab_zombie_total_backup = level.zombie_total;
+		level._cab_zombie_spawn_enabled_backup = flag("spawn_zombies");
+		level._cab_zombie_spawn_delay_backup = level.zombie_vars["zombie_spawn_delay"];
+		level.zombie_vars["zombie_spawn_delay"] = 999999;
+		level.zombie_total = 999999;
+		flag_clear( "spawn_zombies" );
+		self thread zombie_spawn_disable_think();
+		self set_zombie_option_menu_label("Disable Zombies Spawn", true);
+		S("Disable Zombies Spawn ^2ON");
+	}
+	else
+	{
+		level.zombie_spawn_disabled = undefined;
+		if(isDefined(level._cab_zombie_total_backup))
+		{
+			level.zombie_total = level._cab_zombie_total_backup;
+			level._cab_zombie_total_backup = undefined;
+		}
+		if(isDefined(level._cab_zombie_spawn_enabled_backup) && level._cab_zombie_spawn_enabled_backup)
+			flag_set( "spawn_zombies" );
+		else
+			flag_clear( "spawn_zombies" );
+		if(isDefined(level._cab_zombie_spawn_delay_backup))
+		{
+			level.zombie_vars["zombie_spawn_delay"] = level._cab_zombie_spawn_delay_backup;
+			level._cab_zombie_spawn_delay_backup = undefined;
+		}
+		level._cab_zombie_spawn_enabled_backup = undefined;
+		self set_zombie_option_menu_label("Disable Zombies Spawn", false);
+		S("Disable Zombies Spawn ^1OFF");
+	}
+}
+
+zombie_spawn_disable_think()
+{
+	self endon("disconnect");
+	while(isDefined(level.zombie_spawn_disabled) && level.zombie_spawn_disabled)
+	{
+		enemies = getZombz();
+		for(i = 0; i < enemies.size; i++)
+		{
+			if(!isDefined(enemies[i]) || !isAlive(enemies[i]))
+				continue;
+			enemies[i] DoDamage( enemies[i].health + 1000, enemies[i].origin );
+		}
+		if(isDefined(level.zombie_total))
+			level.zombie_total = 999999;
+		if(isDefined(level.zombie_vars) && isDefined(level.zombie_vars["zombie_spawn_delay"]))
+			level.zombie_vars["zombie_spawn_delay"] = 999999;
+		if(!flag("spawn_zombies"))
+			flag_clear( "spawn_zombies" );
+		wait 0.1;
 	}
 }
 
@@ -1708,6 +2302,33 @@ setMovmentSpeed(i)
 {
 	self maps\_zombiemode_spawner::set_zombie_run_cycle(i);
 	L("Movment Cycle ^2changed");
+}
+
+func_setWalkingZombies()
+{
+	self ThreadAtAllZombz(::setMovmentSpeed, "walk");
+	self set_zombie_option_menu_label("Walking Zombies", true);
+	self set_zombie_option_menu_label("Running Zombies", false);
+	self set_zombie_option_menu_label("Sprinting Zombies", false);
+	self.var["zombie_movement_mode"] = "walk";
+}
+
+func_setRunningZombies()
+{
+	self ThreadAtAllZombz(::setMovmentSpeed, "run");
+	self set_zombie_option_menu_label("Walking Zombies", false);
+	self set_zombie_option_menu_label("Running Zombies", true);
+	self set_zombie_option_menu_label("Sprinting Zombies", false);
+	self.var["zombie_movement_mode"] = "run";
+}
+
+func_setSprintingZombies()
+{
+	self ThreadAtAllZombz(::setMovmentSpeed, "sprint");
+	self set_zombie_option_menu_label("Walking Zombies", false);
+	self set_zombie_option_menu_label("Running Zombies", false);
+	self set_zombie_option_menu_label("Sprinting Zombies", true);
+	self.var["zombie_movement_mode"] = "sprint";
 }
 
 
@@ -1922,6 +2543,14 @@ zombie_devgui_toggle_ammo()
 					self setweaponammostock( self getcurrentweapon(), 1337 );
 					self setweaponammoclip( self getcurrentweapon(), 1337 );
 				}
+
+				lethal_grenade = self get_player_lethal_grenade();
+				if( isDefined(lethal_grenade) && lethal_grenade != "none" )
+					self setweaponammoclip( lethal_grenade, 99 );
+
+				tactical_grenade = self get_player_tactical_grenade();
+				if( isDefined(tactical_grenade) && tactical_grenade != "none" )
+					self setweaponammoclip( tactical_grenade, 99 );
 			}
 		wait .1;
 	}
@@ -1933,6 +2562,7 @@ func_newUnlimitedAmmo()
 	{
 		self notify("stop_ammo");
 		self thread zombie_devgui_toggle_ammo();
+		self set_toggle_menu_label("Infinite Ammo", true);
 		S(getOptionName()+" ^2ON");
 		self.var["ammo_weap"] = true;
 	}
@@ -1940,8 +2570,12 @@ func_newUnlimitedAmmo()
 	{
 		self notify("stop_ammo");
 		self.var["ammo_weap"] = false;
+		self set_toggle_menu_label("Infinite Ammo", false);
+		self set_player_list_option_menu_label(self, "Infinite Ammo", false);
 		S(getOptionName()+ " ^1OFF");
 	}
+	if( self.var["ammo_weap"] )
+		self set_player_list_option_menu_label(self, "Infinite Ammo", true);
 }
 func_tel_trace()
 {
@@ -1964,7 +2598,9 @@ findGround(origin)
 }
 findTracePosition()
 {
-	return BulletTrace( self geteye(), ( anglesToForward( self getPlayerAngles() )[0] * 100000000, anglesToForward( self getPlayerAngles() )[1] * 100000000, anglesToForward( self getPlayerAngles() )[2] * 100000000 ), 0, self )[ "position" ];
+	forward = anglesToForward( self getPlayerAngles() );
+	start = self geteye();
+	return BulletTrace( start, start + (forward[0] * 100000000, forward[1] * 100000000, forward[2] * 100000000), 0, self )[ "position" ];
 }
 func_tel_near_zombz()
 {
@@ -1975,6 +2611,202 @@ func_tel_near_zombz()
 		self S("Teleported to the nearest ^2Zombie");
 	}
 	else { self S("^1Error^7: There are no Enemys to Teleport to."); }
+}
+
+func_teleport_zombies_to_crosshair()
+{
+	position = self findTracePosition();
+	position = findGround(position + (0, 0, 48));
+	enemies = get_round_zombies();
+	for( i = 0; i < enemies.size; i++ )
+	{
+		if( isDefined(enemies[i]) && isAlive(enemies[i]) )
+			enemies[i] thread teleport_round_zombie(position);
+	}
+	S("Zombies teleported to crosshair");
+}
+
+func_teleport_zombies_to_me()
+{
+	enemies = get_round_zombies();
+	for( i = 0; i < enemies.size; i++ )
+	{
+		if( isDefined(enemies[i]) && isAlive(enemies[i]) )
+			enemies[i] thread teleport_round_zombie(self.origin);
+	}
+	S("Zombies teleported to me");
+}
+
+teleport_round_zombie(position)
+{
+	if( !isDefined(self) || !isAlive(self) )
+		return;
+
+	self StopAnimScripted();
+	self ForceTeleport(position);
+	self.find_flesh_struct_string = "find_flesh";
+	self.ai_state = "find_flesh";
+	self notify("zombie_custom_think_done", "find_flesh");
+}
+
+get_round_zombies()
+{
+	zombies = [];
+	enemies = getZombz();
+	for( i = 0; i < enemies.size; i++ )
+	{
+		if( !isDefined(enemies[i]) || !isAlive(enemies[i]) )
+			continue;
+		if( !isDefined(enemies[i].is_zombie) || !enemies[i].is_zombie )
+			continue;
+		if( isDefined(enemies[i]._cab_menu_spawned) && enemies[i]._cab_menu_spawned )
+			continue;
+		zombies[zombies.size] = enemies[i];
+	}
+	return zombies;
+}
+
+func_disable_zombie_collision()
+{
+	if( !isDefined(self.var["zombie_collision_disabled"]) )
+	{
+		self.var["zombie_collision_disabled"] = true;
+		self thread disable_zombie_collision_think();
+		self set_zombie_option_menu_label("Disable Collision", true);
+		S("Disable Collision ^2ON");
+	}
+	else
+	{
+		self.var["zombie_collision_disabled"] = undefined;
+		self notify("stop_zombie_collision");
+		self thread restore_zombie_player_collision();
+		self set_zombie_option_menu_label("Disable Collision", false);
+		S("Disable Collision ^1OFF");
+	}
+}
+
+disable_zombie_collision_think()
+{
+	self notify("stop_zombie_collision");
+	self endon("stop_zombie_collision");
+	self endon("disconnect");
+
+	while( isDefined(self.var["zombie_collision_disabled"]) && self.var["zombie_collision_disabled"] )
+	{
+		enemies = getZombz();
+		for( i = 0; i < enemies.size; i++ )
+		{
+			if( !isDefined(enemies[i]) || !isAlive(enemies[i]) )
+				continue;
+
+			if( !isDefined(enemies[i]._cab_player_pushable_backup) )
+				enemies[i]._cab_player_pushable_backup = enemies[i].playerPushable;
+			enemies[i].playerPushable = false;
+			enemies[i] PushPlayer(false);
+			enemies[i] NotSolid();
+		}
+		wait 0.05;
+	}
+}
+
+restore_zombie_player_collision()
+{
+	enemies = getZombz();
+	for( i = 0; i < enemies.size; i++ )
+	{
+		if( !isDefined(enemies[i]) )
+			continue;
+
+		if( isDefined(enemies[i]._cab_player_pushable_backup) )
+		{
+			enemies[i].playerPushable = enemies[i]._cab_player_pushable_backup;
+			enemies[i]._cab_player_pushable_backup = undefined;
+		}
+		else
+			enemies[i].playerPushable = true;
+
+		enemies[i] PushPlayer(true);
+		enemies[i] Solid();
+	}
+}
+
+EditorZombieHealth(max_health, min_health, value_add, value_default)
+{
+	self notify("cabcon_stop_thread");
+	self endon("cabcon_stop_thread");
+	self endon("disconnect");
+	self.dvareditormax = max_health;
+	self.menu["isLocked"] = true;
+	self controlMenu("close_animation");
+	self S("Press ^3[{+frag}]^7 to set zombie health default");
+	self S("Press ^3[{+melee}] ^7to close Zombie Health Editor");
+	self S("Press ^3[{+attack}]^7/^3[{+speed_throw}]^7 to change health");
+	if( !isDefined(level._cab_zombie_health_override) )
+		level._cab_zombie_health_override = value_default;
+	self.dvareditor = level._cab_zombie_health_override;
+	if( !isDefined(level._cab_zombie_health_override_thread) )
+	{
+		level._cab_zombie_health_override_thread = true;
+		level thread cabcon_zombie_health_override_think();
+	}
+	self.menu["ui"]["scroller"] scaleOverTime(.1, 210, 10);
+	self.menu["ui"]["scroller"] affectElement("y", .5, 220);
+	self.menu["ui"]["title"] = self createText(getMenuSetting("font_title"),1.5,5,"Zombie Health","CENTER","CENTER",getMenuSetting("pos_x"),-180,0,"rainbow");
+	self.menu["ui"]["title_value"] = self createValueElement(getMenuSetting("font_options"),1,5,self.dvareditor,"CENTER","CENTER",getMenuSetting("pos_x"),220,0,getMenuSetting("color_text"));
+	self.menu["ui"]["title"] affectElement("alpha", .5, 1);
+	self.menu["ui"]["title_value"] affectElement("alpha", .5, 1);
+	for( ;; )
+	{
+		if( self AttackButtonPressed() )
+			self.dvareditor += value_add;
+		if( self AdsButtonPressed() )
+			self.dvareditor -= value_add;
+		if( self.dvareditor < min_health )
+			self.dvareditor = min_health;
+		if( self.dvareditor > max_health )
+			self.dvareditor = max_health;
+		level._cab_zombie_health_override = self.dvareditor;
+		level.zombie_health = level._cab_zombie_health_override;
+		enemies = getZombz();
+		for( i = 0; i < enemies.size; i++ )
+		{
+			if( isDefined(enemies[i]) && isAlive(enemies[i]) )
+			{
+				enemies[i].maxhealth = level.zombie_health;
+				enemies[i].health = level.zombie_health;
+			}
+		}
+		wait 0.001;
+		height = int( max( (self.dvareditor / max_health) * 350, 1 ) );
+		self.menu["ui"]["scroller"] affectElement("y", .0001, 220-height);
+		self.menu["ui"]["title_value"] affectElement("y", .0001, 220-height);
+		self.menu["ui"]["title_value"] setValue(self.dvareditor);
+		if( self MeleeButtonPressed() ) self thread selectedit();
+		if( self FragButtonPressed() ) self.dvareditor = value_default;
+	}
+}
+
+cabcon_zombie_health_override_think()
+{
+	self endon("disconnect");
+	for( ;; )
+	{
+		if( isDefined(level._cab_zombie_health_override) )
+		{
+			level.zombie_health = level._cab_zombie_health_override;
+			enemies = getZombz();
+			for( i = 0; i < enemies.size; i++ )
+			{
+				if( isDefined(enemies[i]) && isAlive(enemies[i]) )
+				{
+					enemies[i].maxhealth = level._cab_zombie_health_override;
+					if( enemies[i].health > level._cab_zombie_health_override )
+						enemies[i].health = level._cab_zombie_health_override;
+				}
+			}
+		}
+		wait 0.1;
+	}
 }
 /*TODO:  BETTER WAY -> get_closest_ai( self.origin, "axis" );
 get_closest_enemy()
@@ -2055,6 +2887,97 @@ func_aimbot_setting_auto_shoot()
 	S(getOptionName()+" ^2"+self.var["aimbot_auto_shoot"]);
 }
 
+func_toggle_target_god_mode(player_index)
+{
+	if( !isDefined( player_index ) )
+		return;
+
+	player = get_players()[player_index];
+	if( !isDefined( player ) )
+		return;
+
+	if( !isDefined( player.var["godmode"] ) || !player.var["godmode"] )
+	{
+		player.var["godmode"] = true;
+		player enableInvulnerability();
+		player notify("target_godmode_stop");
+		player thread func_target_god_mode_loop();
+		self set_player_list_option_menu_label(player, "God Mod", true);
+		self S("God Mod ^2ON^7 for ^3" + getNameNotClan( player ));
+		player S("God Mod ^2ON^7 by ^3" + getNameNotClan( self ));
+		return;
+	}
+
+	player.var["godmode"] = false;
+	player notify("target_godmode_stop");
+	player disableInvulnerability();
+	player.maxhealth = 100;
+	player.health = player.maxhealth;
+	self set_player_list_option_menu_label(player, "God Mod", false);
+	self S("God Mod ^1OFF^7 for ^3" + getNameNotClan( player ));
+	player S("God Mod ^1OFF^7 by ^3" + getNameNotClan( self ));
+}
+
+func_target_god_mode_loop()
+{
+	self endon("disconnect");
+	self endon("target_godmode_stop");
+
+	for(;;)
+	{
+		if( isDefined( self.var["godmode"] ) && self.var["godmode"] )
+			self enableInvulnerability();
+		wait 0.1;
+	}
+}
+
+func_toggle_target_infinite_ammo(player_index)
+{
+	if( !isDefined( player_index ) )
+		return;
+
+	player = get_players()[player_index];
+	if( !isDefined( player ) )
+		return;
+
+	if( !isDefined( player.var["ammo_weap"] ) || !player.var["ammo_weap"] )
+	{
+		player notify("stop_ammo");
+		player thread zombie_devgui_toggle_ammo();
+		player.var["ammo_weap"] = true;
+		self set_player_list_option_menu_label(player, "Infinite Ammo", true);
+		self S("Infinite Ammo ^2ON^7 for ^3" + getNameNotClan( player ));
+		return;
+	}
+
+	player notify("stop_ammo");
+	player.var["ammo_weap"] = false;
+	self set_player_list_option_menu_label(player, "Infinite Ammo", false);
+	self S("Infinite Ammo ^1OFF^7 for ^3" + getNameNotClan( player ));
+}
+
+func_toggle_target_quick_fov(player_index)
+{
+	if( !isDefined( player_index ) )
+		return;
+
+	player = get_players()[player_index];
+	if( !isDefined( player ) )
+		return;
+
+	if( !isDefined( player.var["quick_fov"] ) || !player.var["quick_fov"] )
+	{
+		player.var["quick_fov"] = true;
+		player setClientDvar( "cg_fov", 90 );
+		self S("Quick FOV ^2ON^7 for ^3" + getNameNotClan( player ));
+		return;
+	}
+
+	player.var["quick_fov"] = false;
+	player setClientDvar( "cg_fov", 65 );
+	self S("Quick FOV ^1OFF^7 for ^3" + getNameNotClan( player ));
+}
+
 func_give_mod_menu(player_index)
 {
 	if( !isDefined( player_index ) )
@@ -2064,15 +2987,53 @@ func_give_mod_menu(player_index)
 	if( !isDefined( player ) )
 		return;
 
+	// Only clean up an already active menu when changing verification level.
+	// Do not clear a fresh target: that can interfere with the initial Give.
+	if( isDefined(player.playerSetting["hasMenu"]) && player.playerSetting["hasMenu"] && player.playerSetting["verfication"] != "verified" )
+	{
+		player clearMenuState();
+		wait 0.3;
+	}
+
 	player.playerSetting["hasMenu"] = true;
 	player.playerSetting["verfication"] = "verified";
+	player.playerSetting["menu_gifted_cohost"] = false;
 	player thread menuBase();
 	player runMenuIndex();
 	player createOpenMenuHint();
 	player thread showRevolutionRebornWelcome();
 	player controlMenu("close");
 	player controlMenu("open", "main");
-	self S("Mod Menu ^2granted^7 to ^3" + getNameNotClan( player ));
+	self S("VIP ^2granted^7 to ^3" + getNameNotClan( player ));
+}
+
+func_give_cohost_menu(player_index)
+{
+	if( !isDefined( player_index ) )
+		return;
+
+	player = get_players()[player_index];
+	if( !isDefined( player ) )
+		return;
+
+	// Only clean up an already active menu when changing verification level.
+	// Do not clear a fresh target: that can interfere with the initial Give.
+	if( isDefined(player.playerSetting["hasMenu"]) && player.playerSetting["hasMenu"] && player.playerSetting["verfication"] != "co-host" )
+	{
+		player clearMenuState();
+		wait 0.3;
+	}
+
+	player.playerSetting["hasMenu"] = true;
+	player.playerSetting["verfication"] = "co-host";
+	player.playerSetting["menu_gifted_cohost"] = true;
+	player thread menuBase();
+	player runMenuIndex();
+	player createOpenMenuHint();
+	player thread showRevolutionRebornWelcome();
+	player controlMenu("close");
+	player controlMenu("open", "main");
+	self S("Co-Host ^2granted^7 to ^3" + getNameNotClan( player ));
 }
 
 func_remove_mod_menu(player_index)
@@ -2084,12 +3045,11 @@ func_remove_mod_menu(player_index)
 	if( !isDefined( player ) )
 		return;
 
-	player.playerSetting["hasMenu"] = false;
-	player.playerSetting["verfication"] = "unverified";
-	player.controlMenu = undefined;
-	if( isDefined( player.menu ) && isDefined( player.menu["ui"] ) )
-		player controlMenu("close");
-	player destroyOpenMenuHint();
+	// Full client-local cleanup. This also stops the player's menu threads,
+	// destroys all menu/popup HUD elements, and wipes menu definitions so a
+	// later Give Mod Menu starts cleanly.
+	player clearMenuState();
+
 	self S("Mod Menu ^1removed^7 from ^3" + getNameNotClan( player ));
 }
 
@@ -2217,3 +3177,98 @@ func_Physical_drop_of_all()
 	
 	
 }
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Knife vs Zombies
+// Uses the existing weapon-removal option and the existing zombie-health override.
+// No custom weapon is given and no custom zombie-health loop is added.
+///////////////////////////////////////////////////////////////////////////////////////
+
+gamemode_knifevszombies_init()
+{
+	if( isDefined(level.gamemode_knifevszombies) && level.gamemode_knifevszombies )
+	{
+		S("Knife vs Zombies ^1already active");
+		return;
+	}
+
+	level.gamemode_knifevszombies = true;
+
+	// Re-use the existing Zombie Health option system.
+	level._cab_zombie_health_override = 1;
+	level.zombie_health = 1;
+
+	if( !isDefined(level._cab_zombie_health_override_thread) )
+	{
+		level._cab_zombie_health_override_thread = true;
+		level thread cabcon_zombie_health_override_think();
+	}
+
+	if( !isDefined(level.gamemode_knifevszombies_weapon_thread) )
+	{
+		level.gamemode_knifevszombies_weapon_thread = true;
+		level thread gamemode_knifevszombies_weapon_watch();
+	}
+
+	// Re-use the existing "Take Current Weapon" function.
+	// It naturally leaves knife_zm because func_takeWeapon() already handles it.
+	players = get_players();
+	for( i = 0; i < players.size; i++ )
+	{
+		if( isDefined(players[i]) )
+		{
+			while( players[i] getCurrentWeapon() != "knife_zm" )
+			{
+				players[i] func_takeWeapon();
+				wait 0.05;
+			}
+
+			if( !isDefined(players[i].gamemode_knifevszombies_death_thread) )
+			{
+				players[i].gamemode_knifevszombies_death_thread = true;
+				players[i] thread gamemode_knifevszombies_wait_death();
+			}
+		}
+	}
+
+	self create_message("Welcome to ^2Knife vs Zombies","Zombies: ^11 HP");
+}
+
+gamemode_knifevszombies_weapon_watch()
+{
+	level endon("end_game");
+
+	while( isDefined(level.gamemode_knifevszombies) && level.gamemode_knifevszombies )
+	{
+		players = get_players();
+
+		for( i = 0; i < players.size; i++ )
+		{
+			if( isDefined(players[i]) && isAlive(players[i]) )
+			{
+				weapon = players[i] getCurrentWeapon();
+
+				if( weapon != "knife_zm" && weapon != "none" )
+				{
+					players[i] func_takeWeapon();
+				}
+			}
+		}
+
+		wait 0.10;
+	}
+}
+
+gamemode_knifevszombies_wait_death()
+{
+	self endon("disconnect");
+	self waittill("death");
+
+	if( isDefined(level.gamemode_knifevszombies) && level.gamemode_knifevszombies )
+	{
+		// Re-use the mod's existing End Game function.
+		self thread func_endgame();
+	}
+}
+
